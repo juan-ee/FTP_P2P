@@ -36,6 +36,7 @@ class Nodo(object):
         self.escuchar_servidor_central()
         #creacion carperta compartida
         commands.getoutput('rm -r Compartida/ | mkdir Compartida')
+        commands.getoutput('mkdir Compartida')
 
     def conectar_nodos(self,nodos):
         for n in nodos:
@@ -88,17 +89,33 @@ class Nodo(object):
                 self.nodos.remove(n)
                 break
 
+    def cargar_archivo(self,path):
+        #creacion de archivo
+        nuevo=open(path,'wb')
+        print 'archivo creado'
+        #escritura de archivo
+        ch=self.soc_serv_central.recv(8192)
+        while ch != 'EOF':
+            #print len(ch)
+            nuevo.write(ch)
+            ch=self.soc_serv_central.recv(8192)
+        #cierre de archivo
+        print 'cerrando arch'
+        nuevo.close()
+
     def funcion_servidor_central(self):
         while 1:
             try:
                 #print 'Esperando SC: '
                 datos=pickle.loads(self.soc_serv_central.recv(1028))
-                #print 'Recibido de SC: ',datos[0]
+                print 'Recibido de SC: ',datos[0]
                 if datos[0]=='new':
                     self.conectar_nodo(datos[1])
                 elif datos[0]=='drop':
                     #print '<%s> desconectando',datos[1]
                     self.borrar_nodo(datos[1])
+                elif datos[0]=='update':
+                    self.cargar_archivo('Compartida/'+datos[1])
             except:
                 break
         return
@@ -129,6 +146,9 @@ class Nodo(object):
             data=raw_input().split()
             if data:
                 if data[0]=='upload':
+                    #comando para copiar archivo a la carpeta
+                    #---
+                    #pilas con el demonio, debe hacer esto:
                     self.enviar_archivo(data)
                 else:
                     print '<%s> %s' %(self.nombre_usuario,' '.join(data))
@@ -145,4 +165,4 @@ class Nodo(object):
     def iniciar_prompt(self):
         threading.Thread(target=self.funcion_prompt).start()
 
-exp=Nodo(int(sys.argv[1]),'localhost',1035)
+exp=Nodo(int(sys.argv[1]),'localhost',1038)

@@ -40,8 +40,7 @@ class Hilo(threading.Thread):
         print 'cerrando arch'
         nuevo.close()
 
-    def enviar_archivo(self,data):
-        print 'subiendo archivo ...'
+    def enviar_archivo(self,path):
         try:
             arch=open(path,'rb')
         except Exception as e:
@@ -52,14 +51,14 @@ class Hilo(threading.Thread):
             chunk = arch.read(8192)
             while chunk:
                 time.sleep(0.0001)
-                self.soc_serv_central.send(chunk)
+                self.soc.send(chunk)
                 chunk = arch.read(8192)
             time.sleep(0.1)
-            self.soc_serv_central.send('EOF')
+            self.soc.send('EOF')
             arch.close()
 
     def replicar_nodos(self,path):
-        for h in argv[0]:
+        for h in self.args[0]:
             if h!=threading.currentThread():
                 h.enviar_archivo(path)
 
