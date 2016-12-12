@@ -33,7 +33,6 @@ class Nodo(object):
         #nombre de usuario
         self.nombre_usuario=nombre_usuario
         #conexion a los demas nodos
-        self.conectar_nodos(pickle.loads(s.recv(1028)))
         self.soc_serv_central=s
         #carpeta compartida
         commands.getoutput('rm -r Compartida/')
@@ -41,11 +40,6 @@ class Nodo(object):
         #servidor central
         self.escuchar_servidor_central()
         #creacion carperta compartida
-
-
-    def conectar_nodos(self,nodos):
-        for n in nodos:
-            self.conectar_nodo((nodos[n][0],nodos[n][1]))
 
     def conectar_nodo(self,nodo):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -107,10 +101,6 @@ class Nodo(object):
                 #print 'Esperando SC: '
                 datos=pickle.loads(self.soc_serv_central.recv(1028))
                 print 'Recibido de SC: ',datos[0]
-                if datos[0]=='load_dir':
-                    print datos[1]
-                    for f in datos[1]:
-                        self.cargar_archivo('Compartida/'+f)
                 if datos[0]=='new':
                     self.conectar_nodo(datos[1])
                 elif datos[0]=='drop':
@@ -118,6 +108,17 @@ class Nodo(object):
                     self.borrar_nodo(datos[1])
                 elif datos[0]=='update':
                     self.cargar_archivo('Compartida/'+datos[1])
+                elif datos[0]=='remove':
+                    print 'borrando..'
+                    print commands.getoutput('rm Compartida/'+datos[1])
+                elif datos[0]=='load_dir':
+                    for f in datos[1]:
+                        self.cargar_archivo('Compartida/'+f)
+                elif datos[0]=='join':
+                    for n in datos[1]:
+                        self.conectar_nodo((datos[1][n][0],datos[1][n][1]))
+
+
             except:
                 break
         return
@@ -149,9 +150,17 @@ class Nodo(object):
             if data:
                 if data[0]=='upload':
                     #comando para copiar archivo a la carpeta
-                    commands.getoutput('cp '+data[1]+' .')
+                    commands.getoutput('cp '+data[1]+' ./Compartida/')
                     #pilas con el demonio, debe hacer esto:
                     self.enviar_archivo(data)
+                elif data[0]=='remove':
+                    if data[1] in commands.getoutput('ls Compartida/').split():
+                        commands.getoutput('rm Compartida/'+data[1])
+                        self.soc_serv_central.send(pickle.dumps((data[0],data[1])))
+                    else:
+                        print 'Archivo no existente'
+                elif data[0]=='list':
+                    print commands.getoutput('ls -l Compartida/')
                 else:
                     print '<%s> %s' %(self.nombre_usuario,' '.join(data))
                     for s in self.nodos:
@@ -167,4 +176,4 @@ class Nodo(object):
     def iniciar_prompt(self):
         threading.Thread(target=self.funcion_prompt).start()
 
-exp=Nodo(int(sys.argv[1]),'localhost',1038)
+exp=Nodo(int(sys.argv[1]),'localhost',1039)

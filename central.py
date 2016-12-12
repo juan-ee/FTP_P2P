@@ -21,7 +21,7 @@ def verificar_usuario(us,nodos,client):
 
 print 'iniciando servidor ...'
 host = ''
-port = 1038
+port = 1039
 backlog = 5
 size = 1024
 nodos={}
@@ -39,18 +39,16 @@ while 1:
     except:
         continue
 
-    #enviar lista de conectados
-    client.send(pickle.dumps(nodos))
+
 
     #enviar a cada nodo el nuevo cliente conectado
     for h in hilos:
         h.informar_nuevo(address[0],us[1])
 
-    #agregar el nuevo nodo al diccionario
-    nodos[us[0]]=(address[0],us[1])
-
     #agregar hilo de ejecucion
     hilos.append(Hilo(us[0],client,args=(hilos,nodos,)))
     hilos[-1].start()
 
-    #enviar_nuevo_nodo(nodos,address[0],us[1])
+
+    #agregar el nuevo nodo al diccionario
+    nodos[us[0]]=(address[0],us[1])

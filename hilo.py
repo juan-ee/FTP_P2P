@@ -12,7 +12,12 @@ class Hilo(threading.Thread):
         self.args=args
         threading.Thread.__init__(self)
         self.enviar_carpeta()
+        self.conectar_nodos()
         return
+
+    def conectar_nodos(self):
+        #enviar lista de conectados
+        self.soc.send(pickle.dumps(('join',self.args[1])))
 
     def enviar_carpeta(self):
         ls=commands.getoutput('ls Compartida/').split()
@@ -72,6 +77,10 @@ class Hilo(threading.Thread):
             if h!=threading.currentThread():
                 h.enviar_archivo(path)
 
+    def informar_borrado(self,arch):
+        for h in self.args[0]:
+            if h!=threading.currentThread():
+                h.soc.send(pickle.dumps(('remove',arch)))
 
     def run(self):
         while 1:
@@ -83,7 +92,10 @@ class Hilo(threading.Thread):
                     path='Compartida/'+data[1]
                     self.cargar_archivo(path)
                     self.replicar_nodos(path)
-
+                elif data[0] == 'remove':
+                    print 'borrando..'
+                    commands.getoutput('rm Compartida/'+data[1])
+                    self.informar_borrado(data[1])
                 else:
                     print data
             except Exception as e:#Desconexion inesperada
