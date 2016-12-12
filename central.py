@@ -33,7 +33,6 @@ s.listen(backlog)
 
 while 1:
     client, address = s.accept()
-    print 'hay un verga conectado'
     #us sera el nombre del usuario que se usara en la red P2P
     try:
         us=verificar_usuario(pickle.loads(client.recv(size)),nodos,client)

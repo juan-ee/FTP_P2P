@@ -30,13 +30,18 @@ class Nodo(object):
                 else:
                     break
         print 'Hola %s! Bienvenido a la red P2P' % nombre_usuario
+        #nombre de usuario
         self.nombre_usuario=nombre_usuario
+        #conexion a los demas nodos
         self.conectar_nodos(pickle.loads(s.recv(1028)))
         self.soc_serv_central=s
+        #carpeta compartida
+        commands.getoutput('rm -r Compartida/')
+        commands.getoutput('mkdir Compartida')
+        #servidor central
         self.escuchar_servidor_central()
         #creacion carperta compartida
-        commands.getoutput('rm -r Compartida/ | mkdir Compartida')
-        commands.getoutput('mkdir Compartida')
+
 
     def conectar_nodos(self,nodos):
         for n in nodos:
@@ -50,13 +55,6 @@ class Nodo(object):
 
 
     def funcion_servidor(self):
-        #print 'iniciando servidor ...'
-        """
-        size = 1024
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('',self.puerto))
-        s.listen(5)
-        """
         size = 1024
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('',self.puerto))
@@ -109,6 +107,10 @@ class Nodo(object):
                 #print 'Esperando SC: '
                 datos=pickle.loads(self.soc_serv_central.recv(1028))
                 print 'Recibido de SC: ',datos[0]
+                if datos[0]=='load_dir':
+                    print datos[1]
+                    for f in datos[1]:
+                        self.cargar_archivo('Compartida/'+f)
                 if datos[0]=='new':
                     self.conectar_nodo(datos[1])
                 elif datos[0]=='drop':
@@ -147,7 +149,7 @@ class Nodo(object):
             if data:
                 if data[0]=='upload':
                     #comando para copiar archivo a la carpeta
-                    #---
+                    commands.getoutput('cp '+data[1]+' .')
                     #pilas con el demonio, debe hacer esto:
                     self.enviar_archivo(data)
                 else:

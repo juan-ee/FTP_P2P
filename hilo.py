@@ -3,6 +3,7 @@ import socket
 import pickle
 import os
 import time
+import commands
 
 class Hilo(threading.Thread):
     def __init__(self,nombre,soc,args=()):
@@ -10,7 +11,16 @@ class Hilo(threading.Thread):
         self.soc=soc
         self.args=args
         threading.Thread.__init__(self)
+        self.enviar_carpeta()
         return
+
+    def enviar_carpeta(self):
+        ls=commands.getoutput('ls Compartida/').split()
+        self.soc.send(pickle.dumps(('load_dir',ls)))
+        for f in ls:
+            print 'enviando',f
+            self.enviar_archivo('Compartida/'+f)
+
 
     def borrar_nodo(self):
         #removiendo el hilo de ejecucion
