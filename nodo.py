@@ -176,4 +176,4 @@ class Nodo(object):
     def iniciar_prompt(self):
         threading.Thread(target=self.funcion_prompt).start()
 
-exp=Nodo(int(sys.argv[1]),'localhost',1039)
+exp=Nodo(int(sys.argv[1]),sys.argv[2],1039)
