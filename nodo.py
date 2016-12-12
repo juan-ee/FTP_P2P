@@ -3,6 +3,8 @@ import pickle
 import threading
 import os
 import sys
+import commands
+import time
 
 class Nodo(object):
 
@@ -32,6 +34,8 @@ class Nodo(object):
         self.conectar_nodos(pickle.loads(s.recv(1028)))
         self.soc_serv_central=s
         self.escuchar_servidor_central()
+        #creacion carperta compartida
+        commands.getoutput('rm -r Compartida/ | mkdir Compartida')
 
     def conectar_nodos(self,nodos):
         for n in nodos:
@@ -68,14 +72,10 @@ class Nodo(object):
                 while 1:
                     try:
                         data = pickle.loads(client.recv(size))
-                        print client
-                        if data != 'close()':
-                            print '<%s> %s' %(user,data)
-                        else:
-                            print '<%s> se ha desconectado' % user
-                            break
+                        print '<%s> %s' %(user,data)
                     except:
                         break
+                print '<%s> desconectado' % user
                 client.close()
             else:
                 client.close()
@@ -91,32 +91,50 @@ class Nodo(object):
     def funcion_servidor_central(self):
         while 1:
             try:
-                print 'Esperando SC: '
+                #print 'Esperando SC: '
                 datos=pickle.loads(self.soc_serv_central.recv(1028))
-                print 'Recibido de SC: ',datos[0]
+                #print 'Recibido de SC: ',datos[0]
                 if datos[0]=='new':
                     self.conectar_nodo(datos[1])
                 elif datos[0]=='drop':
-                    print 'desconectando',datos[1]
+                    #print '<%s> desconectando',datos[1]
                     self.borrar_nodo(datos[1])
-
-
-
-            except Exception as e:
-                print 'Error',e
+            except:
                 break
         return
 
+    def enviar_archivo(self,data):
+        print 'subiendo archivo ...'
+        try:
+            #verificar si el path es correcto
+            arch=open(data[1],'rb')
+        except Exception as e:
+            print 'Error',e
+        else:
+            self.soc_serv_central.send(pickle.dumps((data[0],data[1].split('/')[-1])))
+            time.sleep(0.01)
+            bytes_read = arch.read(8192)
+            while bytes_read:
+                #print len(bytes_read)
+                time.sleep(0.0001)
+                self.soc_serv_central.send(bytes_read)
+                bytes_read = arch.read(8192)
+            print 'send end'
+            time.sleep(0.1)
+            self.soc_serv_central.send('EOF')
+            arch.close()
+
     def funcion_prompt(self):
         while 1:
-        	data=raw_input()
-                #print self.nodos
-                print '<%s> %s' %(self.nombre_usuario,data)
-                for s in self.nodos:
-                    print s
-                    s.send(pickle.dumps(data))
-            	if data=='close()':
-            		break
+            data=raw_input().split()
+            if data:
+                if data[0]=='upload':
+                    self.enviar_archivo(data)
+                else:
+                    print '<%s> %s' %(self.nombre_usuario,' '.join(data))
+                    for s in self.nodos:
+                        s.send(pickle.dumps(' '.join(data)))
+
 
     def iniciar_servidor(self):
         threading.Thread(target=self.funcion_servidor).start()
@@ -127,4 +145,4 @@ class Nodo(object):
     def iniciar_prompt(self):
         threading.Thread(target=self.funcion_prompt).start()
 
-exp=Nodo(int(sys.argv[1]),'localhost',1034)
+exp=Nodo(int(sys.argv[1]),'localhost',1035)
