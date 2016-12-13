@@ -7,24 +7,27 @@ import commands
 
 class Hilo(threading.Thread):
     def __init__(self,nombre,soc,args=()):
+        self.buff=2048
         self.nombre=nombre
         self.soc=soc
         self.args=args
-        threading.Thread.__init__(self)
         self.enviar_carpeta()
         self.conectar_nodos()
+        threading.Thread.__init__(self)
         return
 
     def conectar_nodos(self):
         #enviar lista de conectados
+        print 'enviando lista:',self.args[1]
         self.soc.send(pickle.dumps(('join',self.args[1])))
 
     def enviar_carpeta(self):
         ls=commands.getoutput('ls Compartida/').split()
-        self.soc.send(pickle.dumps(('load_dir',ls)))
-        for f in ls:
-            print 'enviando',f
-            self.enviar_archivo('Compartida/'+f)
+        if ls:
+            self.soc.send(pickle.dumps(('load_dir',ls)))
+            for f in ls:
+                print 'enviando',f
+                self.enviar_archivo('Compartida/'+f)
 
 
     def borrar_nodo(self):
@@ -46,11 +49,11 @@ class Hilo(threading.Thread):
         nuevo=open(path,'wb')
         print 'archivo creado'
         #escritura de archivo
-        ch=self.soc.recv(8192)
+        ch=self.soc.recv(self.buff)
         while ch != 'EOF':
             #print len(ch)
             nuevo.write(ch)
-            ch=self.soc.recv(8192)
+            ch=self.soc.recv(self.buff)
         #cierre de archivo
         print 'cerrando arch'
         nuevo.close()
@@ -63,15 +66,39 @@ class Hilo(threading.Thread):
         else:
             self.soc.send(pickle.dumps(('update',path.split('/')[-1])))
             time.sleep(0.01)
-            chunk = arch.read(8192)
+            chunk = arch.read(self.buff)
             while chunk:
                 time.sleep(0.0001)
                 self.soc.send(chunk)
-                chunk = arch.read(8192)
+                chunk = arch.read(self.buff)
             time.sleep(0.1)
             self.soc.send('EOF')
             arch.close()
 
+    def run(self):
+        while 1:
+            print 'otro loop'
+            try:
+                data = pickle.loads(self.soc.recv(self.buff))
+                print data
+                if data[0] == 'upload':
+                    path='Compartida/'+data[1]
+                    self.cargar_archivo(path)
+                    #self.replicar_nodos(path)
+                elif data[0] == 'remove':
+                    print 'borrando..'
+                    commands.getoutput('rm Compartida/'+data[1])
+                    #self.informar_borrado(data[1])
+                else:
+                    print data
+            except Exception as e:#Desconexion inesperada
+                print e
+                self.borrar_nodo()
+                break
+        print 'Se acabo el while'
+        return
+
+"""
     def replicar_nodos(self,path):
         for h in self.args[0]:
             if h!=threading.currentThread():
@@ -81,26 +108,4 @@ class Hilo(threading.Thread):
         for h in self.args[0]:
             if h!=threading.currentThread():
                 h.soc.send(pickle.dumps(('remove',arch)))
-
-    def run(self):
-        while 1:
-            print 'otro loop'
-            try:
-                data = pickle.loads(self.soc.recv(1024))
-                print data
-                if data[0] == 'upload':
-                    path='Compartida/'+data[1]
-                    self.cargar_archivo(path)
-                    self.replicar_nodos(path)
-                elif data[0] == 'remove':
-                    print 'borrando..'
-                    commands.getoutput('rm Compartida/'+data[1])
-                    self.informar_borrado(data[1])
-                else:
-                    print data
-            except Exception as e:#Desconexion inesperada
-                print e
-                self.borrar_nodo()
-                break
-        print 'Se acabo el while'
-        return
+"""

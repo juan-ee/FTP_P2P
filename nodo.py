@@ -11,10 +11,12 @@ class Nodo(object):
     def __init__(self,puerto,host_sc,puerto_sc):
         self.puerto=puerto
         self.dir='Compartida'
+        self.buff=2048
         self.iniciar_servidor()
         self.nodos=[]
         self.conectar_red(host_sc,puerto_sc)
         self.iniciar_prompt()
+        self.bandera=True
 
     def conectar_red(self,host,puerto):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -26,7 +28,7 @@ class Nodo(object):
                 print 'Nombre incorrecto'
             else:
                 s.send(pickle.dumps((nombre_usuario,self.puerto)))
-                if s.recv(8)=='fail':
+                if s.recv(self.buff)=='fail':
                     print 'Nombre de usuario ya existente'
                 else:
                     break
@@ -50,7 +52,6 @@ class Nodo(object):
 
 
     def funcion_servidor(self):
-        size = 1024
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('',self.puerto))
         s.listen(5)
@@ -58,16 +59,28 @@ class Nodo(object):
         while 1:
             client, address = s.accept()
             #nombre de usuario
-            user=pickle.loads(client.recv(size))
-
+            user=pickle.loads(client.recv(self.buff))
             print '<%s> conectado' %user
 
             if os.fork()==0:
                 while 1:
                     try:
-                        data = pickle.loads(client.recv(size))
-                        print '<%s> %s' %(user,data)
-                    except:
+                        datos = pickle.loads(client.recv(self.buff))
+                        if datos[0]=='upload':
+                            self.bandera=False
+                            #aqui borrar
+                            self.cargar_archivo(''+self.dir+'/'+datos[1])
+                            self.bandera=True
+                        elif datos[0]=='remove':
+                            print 'borrando..'
+                            self.bandera=False
+                            print commands.getoutput('rm '+self.dir+'/'+datos[1])
+                            self.bandera=True
+                        elif datos[0] == 'message':
+                            print '<%s> %s' %(user,datos[1])
+
+                    except Exception as e:
+                        print 'Error server leyendo:',e
                         break
                 print '<%s> desconectado' % user
                 client.close()
@@ -87,11 +100,11 @@ class Nodo(object):
         nuevo=open(path,'wb')
         print 'archivo creado'
         #escritura de archivo
-        ch=self.soc_serv_central.recv(8192)
+        ch=self.soc_serv_central.recv(self.buff)
         while ch != 'EOF':
             #print len(ch)
             nuevo.write(ch)
-            ch=self.soc_serv_central.recv(8192)
+            ch=self.soc_serv_central.recv(self.buff)
         #cierre de archivo
         print 'cerrando arch'
         nuevo.close()
@@ -99,51 +112,52 @@ class Nodo(object):
     def funcion_servidor_central(self):
         while 1:
             try:
-                #print 'Esperando SC: '
-                datos=pickle.loads(self.soc_serv_central.recv(1028))
+                datos=pickle.loads(self.soc_serv_central.recv(self.buff))
                 print 'Recibido de SC: ',datos[0]
                 if datos[0]=='new':
                     self.conectar_nodo(datos[1])
                 elif datos[0]=='drop':
-                    #print '<%s> desconectando',datos[1]
                     self.borrar_nodo(datos[1])
-                elif datos[0]=='update':
-                    self.cargar_archivo(''+self.dir+'/'+datos[1])
-                elif datos[0]=='remove':
-                    print 'borrando..'
-                    print commands.getoutput('rm '+self.dir+'/'+datos[1])
                 elif datos[0]=='load_dir':
                     for f in datos[1]:
                         self.cargar_archivo(''+self.dir+'/'+f)
                 elif datos[0]=='join':
                     for n in datos[1]:
                         self.conectar_nodo((datos[1][n][0],datos[1][n][1]))
-
-
-            except:
-                break
+            except Exception as e:
+                print 'Error: ',e
+        print 'se acabo el while'
         return
 
-    def enviar_archivo(self,data):
+    def enviar_archivo(self,soc,path):
         print 'subiendo archivo ...'
         try:
-            #verificar si el path es correcto
-            arch=open(data[1],'rb')
+            arch=open(path,'rb')
         except Exception as e:
             print 'Error',e
         else:
-            self.soc_serv_central.send(pickle.dumps((data[0],data[1].split('/')[-1])))
             time.sleep(0.01)
-            bytes_read = arch.read(8192)
+            bytes_read = arch.read(self.buff)
             while bytes_read:
                 #print len(bytes_read)
                 time.sleep(0.0001)
-                self.soc_serv_central.send(bytes_read)
-                bytes_read = arch.read(8192)
+                soc.send(bytes_read)
+                bytes_read = arch.read(self.buff)
             print 'send end'
             time.sleep(0.1)
-            self.soc_serv_central.send('EOF')
+            soc.send('EOF')
             arch.close()
+
+    def enviar_archivo_a_todos(self,data):
+        self.soc_serv_central.send(pickle.dumps((data[0],data[1].split('/')[-1])))
+        self.enviar_archivo(self.soc_serv_central,data[1])
+        for s in self.nodos:
+            s.send(pickle.dumps((data[0],data[1].split('/')[-1])))
+            self.enviar_archivo(s,data[1])
+
+    def enviar_a_todos(self,data):
+        for s in self.nodos:
+            s.send(pickle.dumps(data))
 
     def funcion_prompt(self):
         while 1:
@@ -151,11 +165,14 @@ class Nodo(object):
             if data:
                 if data[0]=='upload':
                     #comando para copiar archivo a la carpeta
-                    commands.getoutput('cp '+data[1]+' ./'+self.dir+'/')
-                    #pilas con el demonio, debe hacer esto:
+                    if commands.getstatusoutput('cp '+data[1]+' ./'+self.dir+'/')[0] != 0:
+                        print 'Path incorrecto'
                 elif data[0]=='remove':
                     if data[1] in commands.getoutput('ls '+self.dir+'/').split():
+                        self.bandera=False
                         commands.getoutput('rm '+self.dir+'/'+data[1])
+                        self.bandera=True
+                        self.enviar_a_todos((data[0],data[1]))
                         self.soc_serv_central.send(pickle.dumps((data[0],data[1])))
                     else:
                         print 'Archivo no existente'
@@ -163,8 +180,7 @@ class Nodo(object):
                     print commands.getoutput('ls -l '+self.dir+'/')
                 else:
                     print '<%s> %s' %(self.nombre_usuario,' '.join(data))
-                    for s in self.nodos:
-                        s.send(pickle.dumps(' '.join(data)))
+                    self.enviar_a_todos(('message',' '.join(data)))
 
 
     def iniciar_servidor(self):
@@ -175,5 +191,3 @@ class Nodo(object):
 
     def iniciar_prompt(self):
         threading.Thread(target=self.funcion_prompt).start()
-
-#exp=Nodo(int(sys.argv[1]),sys.argv[2],1039)
