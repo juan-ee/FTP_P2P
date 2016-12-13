@@ -13,33 +13,42 @@ class EventHandler(pyinotify.ProcessEvent):
 
     def process_IN_CREATE(self, event):
         if os.path.basename(event.pathname)[0] != '.' and os.path.basename(event.pathname)[-1] != '~':
-            #print 'upload',event.name
+            print 'created',self.obj.nombre_usuario,self.obj.bandera
             #time.sleep(0.1)
             if self.obj.bandera:
-                self.obj.enviar_archivo_a_todos(('upload',self.obj.dir+'/'+event.name))                
+                self.obj.bandera=False
+                self.obj.enviar_archivo_a_todos(('upload',self.obj.dir+'/'+event.name))
+                self.obj.bandera=True
 
     def process_IN_DELETE(self, event):
         if os.path.basename(event.pathname)[0] != '.' and os.path.basename(event.pathname)[-1] != '~':
             #print 'remove',event.name
             if self.obj.bandera:
+                self.obj.bandera=False
                 self.obj.soc_serv_central.send(pickle.dumps(('remove',event.name)))
                 self.obj.enviar_a_todos(('remove',event.name))
+                self.obj.bandera=True
 
     def process_IN_MOVED_FROM(self,event):
         if os.path.basename(event.pathname)[0] != '.':
             if self.obj.bandera:
+                self.obj.bandera=False
                 self.obj.soc_serv_central.send(pickle.dumps(('remove',event.name)))
                 self.obj.enviar_a_todos(('remove',event.name))
+                self.obj.bandera=True
 
     def process_IN_MOVED_TO(self,event):
         if os.path.basename(event.pathname)[0] != '.':
-            #print 'upload',event.name
+            print 'moved to',self.obj.nombre_usuario,self.obj.bandera
             #time.sleep(0.1)
             if self.obj.bandera:
+                self.obj.bandera=False
                 self.obj.enviar_archivo_a_todos(('upload',self.obj.dir+'/'+event.name))
+                self.obj.bandera=True
 
 wm = pyinotify.WatchManager()
 notifier = pyinotify.Notifier(wm, EventHandler(Nodo(int(sys.argv[1]),'localhost',1039)))
+time.sleep(5)
 wm.add_watch('Compartida',pyinotify.IN_MODIFY | pyinotify.IN_CREATE | pyinotify.IN_DELETE | pyinotify.IN_MOVED_FROM | pyinotify.IN_MOVED_TO)
 notifier.loop()
 

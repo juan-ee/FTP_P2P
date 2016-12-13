@@ -68,7 +68,6 @@ class Nodo(object):
                         datos = pickle.loads(client.recv(self.buff))
                         if datos[0]=='upload':
                             self.bandera=False
-                            #aqui borrar
                             self.cargar_archivo(''+self.dir+'/'+datos[1])
                             self.bandera=True
                         elif datos[0]=='remove':
@@ -102,9 +101,10 @@ class Nodo(object):
         #escritura de archivo
         ch=self.soc_serv_central.recv(self.buff)
         while ch != 'EOF':
-            #print len(ch)
+            print len(ch)
             nuevo.write(ch)
             ch=self.soc_serv_central.recv(self.buff)
+        print 'EOF'
         #cierre de archivo
         print 'cerrando arch'
         nuevo.close()
@@ -125,7 +125,7 @@ class Nodo(object):
                     for n in datos[1]:
                         self.conectar_nodo((datos[1][n][0],datos[1][n][1]))
             except Exception as e:
-                print 'Error: ',e
+                print 'Error con SC: ',e
         print 'se acabo el while'
         return
 
@@ -134,24 +134,25 @@ class Nodo(object):
         try:
             arch=open(path,'rb')
         except Exception as e:
-            print 'Error',e
+            print 'Error enviar archivo',e
         else:
             time.sleep(0.01)
             bytes_read = arch.read(self.buff)
             while bytes_read:
-                #print len(bytes_read)
+                print len(bytes_read)
                 time.sleep(0.0001)
                 soc.send(bytes_read)
                 bytes_read = arch.read(self.buff)
             print 'send end'
             time.sleep(0.1)
+            print 'EOF'
             soc.send('EOF')
             arch.close()
 
     def enviar_archivo_a_todos(self,data):
         self.soc_serv_central.send(pickle.dumps((data[0],data[1].split('/')[-1])))
         self.enviar_archivo(self.soc_serv_central,data[1])
-        for s in self.nodos:
+        for s in self.nodos:            
             s.send(pickle.dumps((data[0],data[1].split('/')[-1])))
             self.enviar_archivo(s,data[1])
 
