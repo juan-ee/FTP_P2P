@@ -66,17 +66,27 @@ class Nodo(object):
                 while 1:
                     try:
                         datos = pickle.loads(client.recv(self.buff))
+                        print datos
                         if datos[0]=='upload':
-                            self.bandera=False
+                            #if self.bandera:
+                            #self.enviar_a_todos(('off'))
                             self.cargar_archivo(''+self.dir+'/'+datos[1])
-                            self.bandera=True
+                            #self.enviar_a_todos(('on'))
                         elif datos[0]=='remove':
                             print 'borrando..'
-                            self.bandera=False
+                            #self.enviar_a_todos(('off'))
                             print commands.getoutput('rm '+self.dir+'/'+datos[1])
-                            self.bandera=True
+                            #self.enviar_a_todos(('on'))
                         elif datos[0] == 'message':
                             print '<%s> %s' %(user,datos[1])
+
+                        elif datos[0]=='off':
+                            print 'apagando bandera'
+                            self.bandera=False
+
+                        elif datos[0]=='on':
+                            print 'encendiendo bandera'
+                            self.bandera=True
 
                     except Exception as e:
                         print 'Error server leyendo:',e
@@ -101,7 +111,7 @@ class Nodo(object):
         #escritura de archivo
         ch=self.soc_serv_central.recv(self.buff)
         while ch != 'EOF':
-            print len(ch)
+            #print len(ch)
             nuevo.write(ch)
             ch=self.soc_serv_central.recv(self.buff)
         print 'EOF'
@@ -139,7 +149,7 @@ class Nodo(object):
             time.sleep(0.01)
             bytes_read = arch.read(self.buff)
             while bytes_read:
-                print len(bytes_read)
+                #print len(bytes_read)
                 time.sleep(0.0001)
                 soc.send(bytes_read)
                 bytes_read = arch.read(self.buff)
@@ -152,7 +162,7 @@ class Nodo(object):
     def enviar_archivo_a_todos(self,data):
         self.soc_serv_central.send(pickle.dumps((data[0],data[1].split('/')[-1])))
         self.enviar_archivo(self.soc_serv_central,data[1])
-        for s in self.nodos:            
+        for s in self.nodos:
             s.send(pickle.dumps((data[0],data[1].split('/')[-1])))
             self.enviar_archivo(s,data[1])
 
@@ -170,11 +180,9 @@ class Nodo(object):
                         print 'Path incorrecto'
                 elif data[0]=='remove':
                     if data[1] in commands.getoutput('ls '+self.dir+'/').split():
-                        self.bandera=False
                         commands.getoutput('rm '+self.dir+'/'+data[1])
-                        self.bandera=True
-                        self.enviar_a_todos((data[0],data[1]))
-                        self.soc_serv_central.send(pickle.dumps((data[0],data[1])))
+                        #self.enviar_a_todos((data[0],data[1]))
+                        #self.soc_serv_central.send(pickle.dumps((data[0],data[1])))
                     else:
                         print 'Archivo no existente'
                 elif data[0]=='list':

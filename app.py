@@ -14,37 +14,49 @@ class EventHandler(pyinotify.ProcessEvent):
     def process_IN_CREATE(self, event):
         if os.path.basename(event.pathname)[0] != '.' and os.path.basename(event.pathname)[-1] != '~':
             print 'created',self.obj.nombre_usuario,self.obj.bandera
-            #time.sleep(0.1)
+            time.sleep(1)
             if self.obj.bandera:
-                self.obj.bandera=False
+                print 'created-bandera true'
+                self.obj.enviar_a_todos(('off',0))
                 self.obj.enviar_archivo_a_todos(('upload',self.obj.dir+'/'+event.name))
-                self.obj.bandera=True
+                self.obj.enviar_a_todos(('on',1))
+            else:
+                print 'created-bandera false'
 
     def process_IN_DELETE(self, event):
         if os.path.basename(event.pathname)[0] != '.' and os.path.basename(event.pathname)[-1] != '~':
             #print 'remove',event.name
             if self.obj.bandera:
-                self.obj.bandera=False
+                print 'delete-bandera true'
+                self.obj.enviar_a_todos(('off',0))
                 self.obj.soc_serv_central.send(pickle.dumps(('remove',event.name)))
                 self.obj.enviar_a_todos(('remove',event.name))
-                self.obj.bandera=True
+                self.obj.enviar_a_todos(('on',1))
+            else:
+                print 'delete-bandera false'
 
     def process_IN_MOVED_FROM(self,event):
         if os.path.basename(event.pathname)[0] != '.':
             if self.obj.bandera:
-                self.obj.bandera=False
+                print 'delete-bandera true'
+                self.obj.enviar_a_todos(('off',0))
                 self.obj.soc_serv_central.send(pickle.dumps(('remove',event.name)))
                 self.obj.enviar_a_todos(('remove',event.name))
-                self.obj.bandera=True
+                self.obj.enviar_a_todos(('on',1))
+            else:
+                print 'delete-bandera false'
 
     def process_IN_MOVED_TO(self,event):
         if os.path.basename(event.pathname)[0] != '.':
             print 'moved to',self.obj.nombre_usuario,self.obj.bandera
-            #time.sleep(0.1)
+            time.sleep(1)
             if self.obj.bandera:
-                self.obj.bandera=False
+                print 'created-bandera true'
+                self.obj.enviar_a_todos(('off',0))
                 self.obj.enviar_archivo_a_todos(('upload',self.obj.dir+'/'+event.name))
-                self.obj.bandera=True
+                self.obj.enviar_a_todos(('on',1))
+            else:
+                print 'created-bandera false'
 
 wm = pyinotify.WatchManager()
 notifier = pyinotify.Notifier(wm, EventHandler(Nodo(int(sys.argv[1]),'localhost',1039)))
