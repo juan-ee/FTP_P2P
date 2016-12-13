@@ -10,6 +10,7 @@ class Nodo(object):
 
     def __init__(self,puerto,host_sc,puerto_sc):
         self.puerto=puerto
+        self.dir='Compartida'
         self.iniciar_servidor()
         self.nodos=[]
         self.conectar_red(host_sc,puerto_sc)
@@ -35,8 +36,8 @@ class Nodo(object):
         #conexion a los demas nodos
         self.soc_serv_central=s
         #carpeta compartida
-        commands.getoutput('rm -r Compartida/')
-        commands.getoutput('mkdir Compartida')
+        commands.getoutput('rm -r '+self.dir+'/')
+        commands.getoutput('mkdir '+self.dir)
         #servidor central
         self.escuchar_servidor_central()
         #creacion carperta compartida
@@ -107,13 +108,13 @@ class Nodo(object):
                     #print '<%s> desconectando',datos[1]
                     self.borrar_nodo(datos[1])
                 elif datos[0]=='update':
-                    self.cargar_archivo('Compartida/'+datos[1])
+                    self.cargar_archivo(''+self.dir+'/'+datos[1])
                 elif datos[0]=='remove':
                     print 'borrando..'
-                    print commands.getoutput('rm Compartida/'+datos[1])
+                    print commands.getoutput('rm '+self.dir+'/'+datos[1])
                 elif datos[0]=='load_dir':
                     for f in datos[1]:
-                        self.cargar_archivo('Compartida/'+f)
+                        self.cargar_archivo(''+self.dir+'/'+f)
                 elif datos[0]=='join':
                     for n in datos[1]:
                         self.conectar_nodo((datos[1][n][0],datos[1][n][1]))
@@ -150,17 +151,16 @@ class Nodo(object):
             if data:
                 if data[0]=='upload':
                     #comando para copiar archivo a la carpeta
-                    commands.getoutput('cp '+data[1]+' ./Compartida/')
+                    commands.getoutput('cp '+data[1]+' ./'+self.dir+'/')
                     #pilas con el demonio, debe hacer esto:
-                    self.enviar_archivo(data)
                 elif data[0]=='remove':
-                    if data[1] in commands.getoutput('ls Compartida/').split():
-                        commands.getoutput('rm Compartida/'+data[1])
+                    if data[1] in commands.getoutput('ls '+self.dir+'/').split():
+                        commands.getoutput('rm '+self.dir+'/'+data[1])
                         self.soc_serv_central.send(pickle.dumps((data[0],data[1])))
                     else:
                         print 'Archivo no existente'
                 elif data[0]=='list':
-                    print commands.getoutput('ls -l Compartida/')
+                    print commands.getoutput('ls -l '+self.dir+'/')
                 else:
                     print '<%s> %s' %(self.nombre_usuario,' '.join(data))
                     for s in self.nodos:

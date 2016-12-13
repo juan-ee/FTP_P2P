@@ -14,7 +14,8 @@ class EventHandler(pyinotify.ProcessEvent):
     def process_IN_CREATE(self, event):
         if os.path.basename(event.pathname)[0] != '.':
             print 'upload',event.name
-            self.obj.enviar_archivo(('upload',event.name))
+            time.sleep(0.1)
+            self.obj.enviar_archivo(('upload',self.obj.dir+'/'+event.name))
 
     def process_IN_DELETE(self, event):
         if os.path.basename(event.pathname)[0] != '.':
@@ -24,7 +25,8 @@ class EventHandler(pyinotify.ProcessEvent):
     def process_IN_MODIFY(self, event):
         if os.path.basename(event.pathname)[0] != '.':
             print 'upload',event.name
-            self.obj.enviar_archivo(('upload',event.name))
+            time.sleep(0.1)
+            self.obj.enviar_archivo(('upload',self.obj.dir+'/'+event.name))
 
     def process_IN_MOVED_FROM(self,event):
         if os.path.basename(event.pathname)[0] != '.':
@@ -34,7 +36,8 @@ class EventHandler(pyinotify.ProcessEvent):
     def process_IN_MOVED_TO(self,event):
         if os.path.basename(event.pathname)[0] != '.':
             print 'upload',event.name
-            self.obj.enviar_archivo(('upload',event.name))
+            time.sleep(0.1)
+            self.obj.enviar_archivo(('upload',self.obj.dir+'/'+event.name))
 
 wm = pyinotify.WatchManager()
 notifier = pyinotify.Notifier(wm, EventHandler(Nodo(int(sys.argv[1]),'localhost',1039)))
