@@ -1,7 +1,7 @@
 import socket
 import pickle
 import os
-import sys
+#import sys
 import commands
 from hilo import Hilo
 
@@ -22,7 +22,7 @@ def verificar_usuario(us,nodos,client):
 
 print 'iniciando servidor ...'
 host = ''
-port = sys.argv[1]
+port = 1039
 backlog = 5
 size = 1024
 nodos={}
