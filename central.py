@@ -22,7 +22,7 @@ def verificar_usuario(us,nodos,client):
 
 print 'iniciando servidor ...'
 host = ''
-port = 1039
+port = 1040
 backlog = 5
 size = 1024
 nodos={}

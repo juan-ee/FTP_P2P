@@ -1,7 +1,7 @@
 import sys
 import time
 import pyinotify
-import daemon
+#import daemon
 import pickle
 import os.path
 from nodo import Nodo
@@ -59,7 +59,7 @@ class EventHandler(pyinotify.ProcessEvent):
                 print 'created-bandera false'
 
 wm = pyinotify.WatchManager()
-notifier = pyinotify.Notifier(wm, EventHandler(Nodo(int(sys.argv[1]),'localhost',1039)))
+notifier = pyinotify.Notifier(wm, EventHandler(Nodo(int(sys.argv[1]),'localhost',1040)))
 time.sleep(5)
 wm.add_watch('Compartida',pyinotify.IN_MODIFY | pyinotify.IN_CREATE | pyinotify.IN_DELETE | pyinotify.IN_MOVED_FROM | pyinotify.IN_MOVED_TO)
 notifier.loop()

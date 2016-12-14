@@ -144,7 +144,7 @@ class Nodo(object):
 
     def enviar_archivo(self,soc,path):
         print 'subiendo archivo ...'
-        self.soc.send(pickle.dumps(('update',path.split('/')[-1])))
+        #self.soc.send(pickle.dumps(('update',path.split('/')[-1])))
         with open(path,'rb') as f:
             for chunk in iter((lambda:f.read(self.buff)),''):
                 time.sleep(0.01)
@@ -155,9 +155,11 @@ class Nodo(object):
 
     def enviar_archivo_a_todos(self,data):
         self.soc_serv_central.send(pickle.dumps((data[0],data[1].split('/')[-1])))
+	time.sleep(0.1)
         self.enviar_archivo(self.soc_serv_central,data[1])
         for s in self.nodos:
             s.send(pickle.dumps((data[0],data[1].split('/')[-1])))
+            time.sleep(0.1)
             self.enviar_archivo(s,data[1])
 
     def enviar_a_todos(self,data):
