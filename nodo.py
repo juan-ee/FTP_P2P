@@ -86,6 +86,7 @@ class Nodo(object):
                         elif datos[0]=='off':
                             print 'apagando bandera'
                             self.bandera=False
+			    time.sleep(0.1)
 
                         elif datos[0]=='on':
                             print 'encendiendo bandera'
@@ -111,10 +112,11 @@ class Nodo(object):
         #creacion de archivo
         with open(path,'wb') as nuevo:
             print path,'creado'
+	    print 'Bandera:',self.bandera
             #escritura de archivo
             ch=self.soc_serv_central.recv(self.buff)
             while ch!='EOF':
-                #print len(ch)
+                print len(ch),self.bandera
                 nuevo.write(ch)
                 ch=self.soc_serv_central.recv(self.buff)
             print 'cerrando arch'
@@ -148,7 +150,7 @@ class Nodo(object):
         with open(path,'rb') as f:
             for chunk in iter((lambda:f.read(self.buff)),''):
                 time.sleep(0.01)
-                #print len(chunk)
+                print 'Enviando ',len(chunk),self.bandera
                 soc.send(chunk)
             time.sleep(0.1)
             soc.send('EOF')
