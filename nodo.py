@@ -70,7 +70,10 @@ class Nodo(object):
                         if datos[0]=='upload':
                             #if self.bandera:
                             #self.enviar_a_todos(('off'))
-                            self.cargar_archivo(''+self.dir+'/'+datos[1])
+                            h=threading.Thread(target=self.cargar_archivo,args=(''+self.dir+'/'+datos[1],))
+                            h.start()
+                            h.join()
+                            #self.cargar_archivo(''+self.dir+'/'+datos[1])
                             #self.enviar_a_todos(('on'))
                         elif datos[0]=='remove':
                             print 'borrando..'
@@ -106,18 +109,16 @@ class Nodo(object):
 
     def cargar_archivo(self,path):
         #creacion de archivo
-        nuevo=open(path,'wb')
-        print 'archivo creado'
-        #escritura de archivo
-        ch=self.soc_serv_central.recv(self.buff)
-        while ch != 'EOF':
-            #print len(ch)
-            nuevo.write(ch)
+        with open(path,'wb') as nuevo:
+            print path,'creado'
+            #escritura de archivo
             ch=self.soc_serv_central.recv(self.buff)
-        print 'EOF'
-        #cierre de archivo
-        print 'cerrando arch'
-        nuevo.close()
+            while ch!='EOF':
+                #print len(ch)
+                nuevo.write(ch)
+                ch=self.soc_serv_central.recv(self.buff)
+            print 'cerrando arch'
+            return
 
     def funcion_servidor_central(self):
         while 1:
@@ -130,7 +131,9 @@ class Nodo(object):
                     self.borrar_nodo(datos[1])
                 elif datos[0]=='load_dir':
                     for f in datos[1]:
-                        self.cargar_archivo(''+self.dir+'/'+f)
+                        h=threading.Thread(target=self.cargar_archivo,args=(''+self.dir+'/'+f,))
+                        h.start()
+                        h.join()
                 elif datos[0]=='join':
                     for n in datos[1]:
                         self.conectar_nodo((datos[1][n][0],datos[1][n][1]))
@@ -141,23 +144,14 @@ class Nodo(object):
 
     def enviar_archivo(self,soc,path):
         print 'subiendo archivo ...'
-        try:
-            arch=open(path,'rb')
-        except Exception as e:
-            print 'Error enviar archivo',e
-        else:
-            time.sleep(0.01)
-            bytes_read = arch.read(self.buff)
-            while bytes_read:
-                #print len(bytes_read)
-                time.sleep(0.0001)
-                soc.send(bytes_read)
-                bytes_read = arch.read(self.buff)
-            print 'send end'
+        self.soc.send(pickle.dumps(('update',path.split('/')[-1])))
+        with open(path,'rb') as f:
+            for chunk in iter((lambda:f.read(self.buff)),''):
+                time.sleep(0.01)
+                #print len(chunk)
+                soc.send(chunk)
             time.sleep(0.1)
-            print 'EOF'
             soc.send('EOF')
-            arch.close()
 
     def enviar_archivo_a_todos(self,data):
         self.soc_serv_central.send(pickle.dumps((data[0],data[1].split('/')[-1])))

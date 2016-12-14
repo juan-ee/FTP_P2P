@@ -28,6 +28,7 @@ class Hilo(threading.Thread):
             for f in ls:
                 print 'enviando',f
                 self.enviar_archivo('Compartida/'+f)
+                time.sleep(0.1)
 
 
     def borrar_nodo(self):
@@ -59,21 +60,15 @@ class Hilo(threading.Thread):
         nuevo.close()
 
     def enviar_archivo(self,path):
-        try:
-            arch=open(path,'rb')
-        except Exception as e:
-            print 'Error',e
-        else:
-            self.soc.send(pickle.dumps(('update',path.split('/')[-1])))
-            time.sleep(0.01)
-            chunk = arch.read(self.buff)
-            while chunk:
-                time.sleep(0.0001)
+        #self.soc.send(pickle.dumps(('update',path.split('/')[-1])))
+        with open(path,'rb') as f:
+            for chunk in iter((lambda:f.read(self.buff)),''):
+                time.sleep(0.01)
+                #print len(chunk)
                 self.soc.send(chunk)
-                chunk = arch.read(self.buff)
             time.sleep(0.1)
             self.soc.send('EOF')
-            arch.close()
+
 
     def run(self):
         while 1:
